@@ -73,7 +73,7 @@ function updateDisplay() {
  */
 async function setupNextQuestion() {
     try {
-        const response = await fetch(`./get_trivia.php?t=${new Date().getTime()}`, { cache: 'no-store' });
+        const response = await fetch(`/api/get_trivia.php?t=${new Date().getTime()}`, { cache: 'no-store' });
         if (!response.ok) throw new Error(`サーバーエラー: ${response.statusText}`);
         currentQuestionData = await response.json();
         odaiTextElement.textContent = currentQuestionData.odai;

@@ -4,16 +4,17 @@ header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
 header('Expires: -1');
 
-// ★★★ 修正点：設定ファイルを読み込む ★★★
-require_once 'db_config.php';
+// 設定ファイルを読み込む
+require_once __DIR__ . '/db_config.php';
 
 try {
-    $pdo = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
+    // PostgreSQLに接続
+    $pdo = new PDO($dsn, $db_user, $db_pass);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 } catch (PDOException $e) {
     header('Content-Type: application/json');
     http_response_code(500);
-    echo json_encode(['error' => 'データベースに接続できませんでした。']);
+    echo json_encode(['error' => 'データベースに接続できませんでした。', 'details' => $e->getMessage()]);
     exit;
 }
 
