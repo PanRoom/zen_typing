@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>禅タイピング</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mogamoga1024/typing-jp@latest/dist/cdn/typing-jp.js"></script>
+</head>
+<body>
+    <button id="toggle-history-btn" title="履歴の表示/非表示">履歴</button>
+    <main class="main-wrapper">
+        <div id="game-container">
+            <div id="odai-text" class="text-display"></div>
+            <div id="furigana-text" class="text-display"></div>
+            <div id="roman-text" class="text-display"></div>
+            <a id="trivia-source" class="source-display" href="#" target="_blank" rel="noopener noreferrer"></a>
+        </div>
+        <div id="history-container" class="hidden">
+            <div id="history-list"></div>
+            <button id="scroll-down-btn" class="hidden" title="最新の履歴へ">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 15.586l-4.293-4.293a1 1 0 00-1.414 1.414l5 5a1 1 0 001.414 0l5-5a1 1 0 00-1.414-1.414L12 15.586z"></path><path d="M12 8.586l-4.293-4.293a1 1 0 10-1.414 1.414l5 5a1 1 0 001.414 0l5-5a1 1 0 10-1.414-1.414L12 8.586z"></path></svg>
+            </button>
+        </div>
+    </main>
+    <div id="score-board">
+        <div id="score-summary">
+            <div class="score-item">
+                <span class="score-label">KPS</span>
+                <span id="kps-value" class="score-value">0.00</span>
+            </div>
+            <div class="score-item">
+                <span class="score-label">ACCURACY</span>
+                <span id="accuracy-value" class="score-value">100.0%</span>
+            </div>
+            <div class="score-item">
+                 <button id="chart-icon" class="text-button" title="グラフを表示/非表示">グラフ</button>
+            </div>
+        </div>
+        
+        <div id="chart-details">
+            <div class="chart-wrapper">
+                <canvas id="kps-chart"></canvas>
+            </div>
+            <div class="chart-wrapper">
+                <canvas id="accuracy-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <audio id="type-sound" src="./sounds/type.mp3" preload="auto"></audio>
+    <audio id="clear-sound" src="./sounds/clear.mp3" preload="auto"></audio>
+    <script src="script.js"></script>
+</body>
+</html>
