@@ -74,7 +74,13 @@ function updateDisplay() {
 async function setupNextQuestion() {
     try {
         const response = await fetch(`/api/get_trivia.php?t=${new Date().getTime()}`, { cache: 'no-store' });
-        if (!response.ok) throw new Error(`サーバーエラー: ${response.statusText}`);
+        if (!response.ok) {
+            // サーバーからのエラーレスポンスをJSONとして解析試行
+            const errorData = await response.json().catch(() => null);
+            const errorMessage = errorData?.error || `サーバーエラー: ${response.statusText}`;
+            const errorDetails = errorData?.details ? ` (${errorData.details})` : '';
+            throw new Error(errorMessage + errorDetails);
+        }
         currentQuestionData = await response.json();
         odaiTextElement.textContent = currentQuestionData.odai;
         typingText = new TypingText(currentQuestionData.yomi);
@@ -92,7 +98,7 @@ async function setupNextQuestion() {
         triviaSourceElement.classList.remove('fade-out');
     } catch (error) {
         console.error('お題の取得に失敗しました:', error);
-        odaiTextElement.textContent = 'お題の取得に失敗しました。';
+        odaiTextElement.textContent = error.message; // より詳細なエラーメッセージを表示
     }
 }
 
