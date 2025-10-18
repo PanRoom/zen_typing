@@ -19,44 +19,54 @@ const accuracyChartCanvas = document.getElementById('accuracy-chart');
 const typeSound = document.getElementById('type-sound');
 const clearSound = document.getElementById('clear-sound');
 
-// --- パフォーマンス改善のための新設/変更 --- 
-let typingText;
-let keyLogs = [];
-let scoreHistory = [];
-let kpsChart = null;
-let accuracyChart = null;
+// ゲームの状態を管理する変数
+let typingText; // 現在のタイピングテキストオブジェクト
+let keyLogs = []; // キー入力のログ（スコア計算用）
+let scoreHistory = []; // スコアの履歴（グラフ描画用）
+let kpsChart = null; // KPSグラフのインスタンス
+let accuracyChart = null; // 正解率グラフのインスタンス
 let currentQuestionData = null; // 現在表示中のお題のデータ
-let nextQuestionPromise = null; // 次のお題を取得するPromiseを保持
+let nextQuestionPromise = null; // 次のお題を非同期で取得するPromise
 
+// グラフに表示する秒数
 const GRAPH_WINDOW_SECONDS = 30;
 
 /**
- * 履歴アイテムを追加する関数 (変更なし)
+ * 完了したお題を履歴に追加する
+ * @param {object} questionData - 表示したお題のデータ
  */
 function addHistoryItem(questionData) {
     if (!questionData) return;
+
+    // スクロールが一番下にあるか判定
     const isScrolledToBottom = Math.abs(historyList.scrollHeight - historyList.scrollTop - historyList.clientHeight) < 1;
+
     const item = document.createElement('div');
     item.className = 'history-item';
+
     const odai = document.createElement('div');
     odai.className = 'odai';
     odai.textContent = questionData.odai;
+
     const sourceLink = document.createElement('a');
     sourceLink.className = 'source';
     sourceLink.href = questionData.source;
     sourceLink.textContent = '出典: Wikipedia';
     sourceLink.target = '_blank';
     sourceLink.rel = 'noopener noreferrer';
+
     item.appendChild(odai);
     item.appendChild(sourceLink);
     historyList.appendChild(item);
+
+    // 履歴追加前に一番下までスクロールされていたら、追加後も一番下にスクロールする
     if (isScrolledToBottom) {
         historyList.scrollTop = historyList.scrollHeight;
     }
 }
 
 /**
- * 画面の表示を更新する関数 (変更なし)
+ * タイピングの進捗状況を画面に反映する
  */
 function updateDisplay() {
     if (!typingText) return;
@@ -65,10 +75,12 @@ function updateDisplay() {
 }
 
 /**
- * [新設] APIから次のお題データを非同期で取得する関数
+ * APIから次のお題を非同期で取得する
+ * @returns {Promise<object|null>} お題のデータ、またはエラー時にnull
  */
 async function fetchNextQuestion() {
     try {
+        // キャッシュを避けるためにタイムスタンプを追加
         const response = await fetch(`/api/get_trivia.php?t=${new Date().getTime()}`, { cache: 'no-store' });
         if (!response.ok) {
             const errorData = await response.json().catch(() => null);
@@ -79,23 +91,24 @@ async function fetchNextQuestion() {
         return await response.json();
     } catch (error) {
         console.error('お題の取得に失敗しました:', error);
-        odaiTextElement.textContent = error.message;
-        return null; // エラーが発生した場合はnullを返す
+        odaiTextElement.textContent = 'お題の取得に失敗しました。ページをリロードしてください。';
+        return null;
     }
 }
 
 /**
- * [変更] 受け取ったデータで画面をセットアップする関数
- * @param {object} questionData 表示するお題のデータ
+ * 新しいお題を画面にセットアップする
+ * @param {object} questionData - 表示するお題のデータ
  */
 function setupQuestion(questionData) {
-    if (!questionData) return; // データがなければ何もしない
+    if (!questionData) return;
 
     currentQuestionData = questionData;
     odaiTextElement.textContent = currentQuestionData.odai;
     typingText = new TypingText(currentQuestionData.yomi);
     updateDisplay();
 
+    // 出典情報があればリンクを表示
     if (currentQuestionData.source && currentQuestionData.source.startsWith('http')) {
         triviaSourceElement.href = currentQuestionData.source;
         triviaSourceElement.textContent = '出典: Wikipedia';
@@ -104,7 +117,7 @@ function setupQuestion(questionData) {
         triviaSourceElement.style.display = 'none';
     }
 
-    // フェードインのためにクラスを削除
+    // フェードインアニメーションのためにクラスをリセット
     odaiTextElement.classList.remove('fade-out');
     furiganaTextElement.classList.remove('fade-out');
     romanTextElement.classList.remove('fade-out');
@@ -112,53 +125,65 @@ function setupQuestion(questionData) {
 }
 
 /**
- * [新設] 次の問題を読み込んで表示するメインの関数
+ * 次のお題を読み込んで表示する
  */
 async function loadNextQuestion() {
-    // 裏で取得中の次の問題データを待つ
+    // 裏で取得しておいたお題データを待つ
     const questionData = await nextQuestionPromise;
     
-    // 新しい問題を表示
+    // 新しいお題を画面に表示
     setupQuestion(questionData);
 
-    // さらに次の問題を裏で取得開始する
+    // さらに次のお題を裏で取得開始
     nextQuestionPromise = fetchNextQuestion();
 }
 
 
 /**
- * スコアを計算して表示を更新する関数 (変更なし)
+ * スコア（KPSと正解率）を計算して表示を更新する
  */
 function updateScore() {
     const now = Date.now();
-    const oneMinuteAgo = now - 60000;
-    const recentLogs = keyLogs.filter(log => log.time > oneMinuteAgo);
-    keyLogs = recentLogs;
-    const totalStrokes = recentLogs.length;
-    const correctStrokes = recentLogs.filter(log => log.correct).length;
+    const oneMinuteAgo = now - 60000; // 1分前までのログを対象とする
+
+    // 古いキーログを削除
+    keyLogs = keyLogs.filter(log => log.time > oneMinuteAgo);
+
+    const totalStrokes = keyLogs.length;
+    const correctStrokes = keyLogs.filter(log => log.correct).length;
+    
     const kps = (totalStrokes / 60).toFixed(2);
     const accuracy = totalStrokes > 0 ? ((correctStrokes / totalStrokes) * 100) : 100.0;
+
     kpsValueElement.textContent = kps;
     accuracyValueElement.textContent = `${accuracy.toFixed(1)}%`;
+
+    // グラフ描画用にスコアを履歴に保存
     scoreHistory.push({ kps: parseFloat(kps), accuracy: accuracy });
-    if (scoreHistory.length > 300) {
+    if (scoreHistory.length > 300) { // 履歴は最大300件まで保持
         scoreHistory.shift();
     }
+
+    // グラフが表示されている場合のみ再描画
     if (scoreBoard.classList.contains('expanded')) {
         renderChart();
     }
 }
 
 /**
- * グラフを描画する関数 (変更なし)
+ * Chart.jsを使ってスコアの推移グラフを描画する
  */
 function renderChart() {
+    // 既存のチャートがあれば破棄
     if (kpsChart) { kpsChart.destroy(); }
     if (accuracyChart) { accuracyChart.destroy(); }
+
     const chartData = scoreHistory.slice(-GRAPH_WINDOW_SECONDS);
     const labels = Array.from({ length: chartData.length }, (_, i) => i + 1);
     const kpsData = chartData.map(data => data.kps);
     const accuracyData = chartData.map(data => data.accuracy);
+
+    // KPSグラフの描画
     kpsChart = new Chart(kpsChartCanvas, {
         type: 'line',
         data: {
@@ -177,6 +202,8 @@ function renderChart() {
             scales: { x: { title: { display: true, text: `直近${GRAPH_WINDOW_SECONDS}秒間の推移` } }, y: { type: 'linear', display: true, position: 'left', title: { display: true, text: 'KPS' }, suggestedMin: 0, suggestedMax: 5 } }
         }
     });
+
+    // 正解率グラフの描画
     accuracyChart = new Chart(accuracyChartCanvas, {
         type: 'line',
         data: {
@@ -197,29 +224,49 @@ function renderChart() {
     });
 }
 
-// キーボードの入力イベントを監視 (変更あり)
+/**
+ * キーボード入力のイベントリスナー
+ */
 window.addEventListener('keydown', (e) => {
-    if (!typingText) return;
-    if (!TypingText.isValidInputKey(e.key)) return;
+    if (!typingText || !TypingText.isValidInputKey(e.key)) {
+        return;
+    }
     e.preventDefault();
+
     const result = typingText.inputKey(e.key);
     const isCorrect = (result !== 'unmatch');
     keyLogs.push({ time: Date.now(), correct: isCorrect });
-    if (isCorrect) { if(typeSound.readyState >= 2) { typeSound.currentTime = 0; typeSound.play(); } }
+
+    if (isCorrect) {
+        if(typeSound.readyState >= 2) {
+            typeSound.currentTime = 0;
+            typeSound.play();
+        }
+    }
+
     updateDisplay();
+
+    // タイピングが完了した場合
     if (result === 'complete') {
         addHistoryItem(currentQuestionData);
-        if (typingText.remainingRoman.length === 0) { if(clearSound.readyState >= 2) { clearSound.play(); } }
+        if (typingText.remainingRoman.length === 0) {
+            if(clearSound.readyState >= 2) { clearSound.play(); }
+        }
+        
+        // フェードアウトアニメーション
         odaiTextElement.classList.add('fade-out');
         furiganaTextElement.classList.add('fade-out');
         romanTextElement.classList.add('fade-out');
         triviaSourceElement.classList.add('fade-out');
-        // [変更] タイムアウト後に新しい問題をロードする
+        
+        // アニメーション後に次のお題を読み込む
         setTimeout(loadNextQuestion, 500);
     }
 });
 
-// アイコンクリックでグラフコンテナを開閉 (変更なし)
+/**
+ * グラフ表示エリアの開閉イベント
+ */
 chartIcon.addEventListener('click', () => {
     scoreBoard.classList.toggle('expanded');
     if (scoreBoard.classList.contains('expanded')) {
@@ -227,35 +274,42 @@ chartIcon.addEventListener('click', () => {
     }
 });
 
-// 履歴リストのスクロールイベント (変更なし)
+/**
+ * 履歴リストのスクロールイベント（「下へ」ボタンの表示制御）
+ */
 historyList.addEventListener('scroll', () => {
     const isScrolledToBottom = Math.abs(historyList.scrollHeight - historyList.scrollTop - historyList.clientHeight) < 1;
-    if (isScrolledToBottom) {
-        scrollDownBtn.classList.add('hidden');
-    } else {
-        scrollDownBtn.classList.remove('hidden');
-    }
+    scrollDownBtn.classList.toggle('hidden', isScrolledToBottom);
 });
 
-// スクロールダウンボタンのクリックイベント (変更なし)
+/**
+ * 「下へ」ボタンのクリックイベント
+ */
 scrollDownBtn.addEventListener('click', () => {
     historyList.scrollTo({ top: historyList.scrollHeight, behavior: 'smooth' });
 });
 
-// 履歴表示切り替えボタンのクリックイベント (変更なし)
+/**
+ * 履歴エリアの表示/非表示を切り替えるイベント
+ */
 toggleHistoryBtn.addEventListener('click', () => {
     historyContainer.classList.toggle('hidden');
     gameContainer.classList.toggle('with-history');
 });
 
-// --- [変更] ゲーム開始処理 ---
+/**
+ * ゲームを開始する初期化関数
+ */
 function startGame() {
-    // 最初に2問分のお題を並行して取得開始
+    // ユーザーの操作を待たずに、先にお題を取得開始しておく
     nextQuestionPromise = fetchNextQuestion();
-    // 1問目を表示
+    
+    // 最初のお題を表示
     loadNextQuestion();
-    // スコア更新タイマーを開始
+    
+    // 1秒ごとにスコアを更新するタイマーを開始
     setInterval(updateScore, 1000);
 }
 
+// ゲーム開始
 startGame();
