@@ -1,2 +1,1 @@
-# データベース設定ファイルを無視する
-api/db_config.php
+.env.local
