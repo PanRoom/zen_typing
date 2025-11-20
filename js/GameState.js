@@ -1,4 +1,5 @@
-/** ゲームの状態を管理するクラス
+/** 
+ * ゲームの状態を管理するクラス
  * キーログ、スコア、現在のお題とタイピング進捗を保持する
  */
 export class GameState {
@@ -63,10 +64,6 @@ export class GameState {
     addKeyLog(isCorrect) {
         const now = Date.now();
         this.keyLogs.push({ time: now, correct: isCorrect });
-
-        // 古いログを削除
-        const cutoffTime = now - this.SCORE_CALCULATION_WINDOW_MS;
-        this.keyLogs = this.keyLogs.filter(log => log.time > cutoffTime);
     }
 
     /** 
@@ -88,6 +85,11 @@ export class GameState {
      */
     calculateScore() {
         // このメソッドはTypingGameから1秒ごとに呼び出される想定
+
+        // 古いキーログを削除
+        const now = Date.now();
+        const cutoffTime = now - this.SCORE_CALCULATION_WINDOW_MS;
+        this.keyLogs = this.keyLogs.filter(log => log.time > cutoffTime);
        
         // ログが1件もない場合は 0
         if (this.keyLogs.length === 0) {
@@ -98,11 +100,11 @@ export class GameState {
         const correctStrokes = this.keyLogs.filter(log => log.correct).length;
 
         // KPS (Keys Per Second)
-        // 1分間のキー入力数を60で割る
-        const kps = totalStrokes / (this.SCORE_CALCULATION_WINDOW_MS / 1000);
+        // 1分間の正解キー入力数を60で割る
+        const kps = (correctStrokes / (this.SCORE_CALCULATION_WINDOW_MS / 1000)).toFixed(2);
 
         // 正確率
-        const accuracy = totalStrokes > 0 ? (correctStrokes / totalStrokes) * 100 : 100.0;
+        const accuracy = ((correctStrokes / totalStrokes) * 100).toFixed(1);
 
         return { kps: kps, accuracy: accuracy};
     }
