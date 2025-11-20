@@ -123,7 +123,7 @@ export class UIManager {
      */
     updateScoreDisplay(kps, accuracy) {
         this.kpsValueElement.textContent = kps;
-        this.accuracyValueElement.textContent = `${accuracy.toFixed(1)}%`;
+        this.accuracyValueElement.textContent = `${accuracy}%`;
     }
 
     /**
